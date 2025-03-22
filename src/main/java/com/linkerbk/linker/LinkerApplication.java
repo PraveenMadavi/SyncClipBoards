@@ -12,9 +12,5 @@ public class LinkerApplication {
 		System.out.println("LINKER APP is RUNNING;");
 	}
 
-	public static String methodSecond(){
-
-		return "text";
-	}
 
 }

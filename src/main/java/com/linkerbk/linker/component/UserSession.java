@@ -1,7 +1,8 @@
 package com.linkerbk.linker.component;
 
 
-import com.linkerbk.linker.models.Clipboard;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
@@ -9,11 +10,8 @@ import org.springframework.web.context.annotation.SessionScope;
 @Component
 @SessionScope
 @ToString
+@Getter
+@Setter
 public class UserSession {
-    private String username;
-    private Clipboard clipboard;
-
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    private Long userId;
 }
