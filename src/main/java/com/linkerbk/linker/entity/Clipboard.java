@@ -18,6 +18,7 @@ public class Clipboard {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Lob
     private String clipText;
 
     @OneToMany(mappedBy = "clipboard", cascade = CascadeType.ALL, orphanRemoval = true)

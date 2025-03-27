@@ -1,7 +1,8 @@
 package com.linkerbk.linker.controllers;
 
-//import com.linkerbk.linker.component.UserSession;
+import com.linkerbk.linker.entity.Clipboard;
 import com.linkerbk.linker.entity.User;
+import com.linkerbk.linker.repository.ClipBoardRepo;
 import com.linkerbk.linker.repository.UserRepository;
 import com.linkerbk.linker.services.RandomGenerator;
 import jakarta.servlet.http.HttpSession;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/session")
@@ -20,6 +22,8 @@ public class SessionBeanController {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ClipBoardRepo clipRepo;
 
 //    private final UserSession userSession;
 //    public SessionBeanController(UserSession userSession) {
@@ -27,12 +31,12 @@ public class SessionBeanController {
 //    }
 
     @PostMapping("/set-user")
-    public ResponseEntity<String>setUser(@RequestBody User user, HttpSession session) {
+    public ResponseEntity<String> setUser(@RequestBody User user, HttpSession session) {
         user.setConnectionKey(RandomGenerator.generateUnique6DigitNumber());
         User savedUser = userRepository.save(user); //save into H2DB
-        session.setAttribute("userId",savedUser.getId()); //for save only userId in session
+        session.setAttribute("userId", savedUser.getId()); //for save only userId in session
 
-        System.out.println( "Saved user" + savedUser); //comment line after testing
+        System.out.println("Saved user" + savedUser); //comment line after testing
 //        userSession.setUserId(savedUser.getId());
 //        System.out.println(userSession);
 //        System.out.println("Httpsession : "+session);
@@ -46,17 +50,48 @@ public class SessionBeanController {
 //    }
 
     @PostMapping("/sync")
-    public ResponseEntity<String> syncWith(@RequestBody String connectionKey) {
+    public ResponseEntity<String> syncWith(@RequestBody String connectionKey, HttpSession session) {
+        int Key = Integer.parseInt(connectionKey);
+        System.out.println("User passed connection key to sync : " + Key);
+        User partnerUser = userRepository.findByConnectionKey(Key)
+                .orElseThrow(() -> new RuntimeException("User not found with connectionKey: " + Key));
+        Clipboard clipboard = clipRepo.save(new Clipboard());
 
         try {
-            logger.info("User provided Key: {}", connectionKey);
-            return ResponseEntity.ok().body("Key received successfully");
-        } catch (IllegalArgumentException e) {
-            logger.warn("Invalid connection key: {}", e.getMessage());
+            partnerUser.setClipboard(clipboard);
+            try {
+                userRepository.save(partnerUser);
+                System.out.println("Partner details added and saved : " + partnerUser);
+            } catch (Exception e) {
+                logger.atError().log("Error during save partners clipboard!");
+                throw new RuntimeException(e);
+            }
+
+            System.out.println("Test Sync : User details : " + session.getAttribute("userId"));
+            try {
+                User user = userRepository.getReferenceById((Long) session.getAttribute("userId"));
+                user.setClipboard(clipboard);
+                userRepository.save(user);
+            } catch (Exception e) {
+                System.out.println("Test : error : error during persist instance of user ");
+                throw new RuntimeException(e);
+            }
+            return ResponseEntity.ok().body("Both system clipboards are synced now.");
+
         } catch (Exception e) {
-            logger.error("Unexpected error occurred", e);
+            throw new RuntimeException(e);
+//            return ResponseEntity.internalServerError().body("An unexpected error occurred.");
+
         }
-        return ResponseEntity.internalServerError().body("An unexpected error occurred.");
+
+//        try {
+//            logger.info("User provided Key: {}", connectionKey);
+//            return ResponseEntity.ok().body("Key received successfully");
+//        } catch (IllegalArgumentException e) {
+//            logger.warn("Invalid connection key: {}", e.getMessage());
+//        } catch (Exception e) {
+//            logger.error("Unexpected error occurred", e);
+//        }
     }
 
 
